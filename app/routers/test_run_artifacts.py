@@ -2,7 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from starlette.responses import FileResponse, RedirectResponse
+from starlette.responses import FileResponse, RedirectResponse, Response
 
 from app.artifacts.keys import screenshot_key, video_key
 from app.artifacts.storage import ArtifactStorage
@@ -30,7 +30,7 @@ def _maybe_presign_or_local(
     filename: str,
     media_type: str,
     presign_ttl: timedelta = timedelta(minutes=30),
-) -> RedirectResponse | FileResponse:
+) -> Response:
     # 1) Remote storage path via presigned URL
     url = storage.presign_get_url(object_key=object_key, expires=presign_ttl)
     if url:
@@ -57,7 +57,7 @@ def get_test_run_video(
     run_id: int,
     storage: ArtifactStorage = Depends(get_artifact_storage),
     test_run_repo: TestRunRepository = Depends(get_test_run_repo),
-) -> RedirectResponse | FileResponse:
+) -> Response:
     run = test_run_repo.get_item(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="run does not exists")
@@ -85,7 +85,7 @@ def get_test_run_screenshot(
     run_id: int,
     test_run_repo: TestRunRepository = Depends(get_test_run_repo),
     storage: ArtifactStorage = Depends(get_artifact_storage),
-) -> RedirectResponse | FileResponse:
+) -> Response:
     run = test_run_repo.get_item(run_id)
 
     if not run:
