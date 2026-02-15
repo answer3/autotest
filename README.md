@@ -67,10 +67,6 @@ Handles:
 
 ---
 
-# Project Structure
-
----
-
 # Local Development (Poetry)
 
 ## 1) Install dependencies
