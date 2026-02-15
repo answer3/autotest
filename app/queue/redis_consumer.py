@@ -73,7 +73,7 @@ class RedisConsumer:
                 try:
                     body = json.dumps(fields).encode("utf-8")
                     handler(body)
-                    self._r.xack(self._stream, self._group, msg_id)
+                    self._r.xack(self._stream, self._group, msg_id)  # type: ignore[no-untyped-call]
                 except Exception:
                     time.sleep(on_error_sleep_s)
 

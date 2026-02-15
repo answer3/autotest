@@ -10,6 +10,21 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        args:
+          - --config-file=pyproject.toml
+          - .
+        pass_filenames: false
+        additional_dependencies:
+          - sqlalchemy
+          - pydantic
+          - pydantic-settings
+          - fastapi
+          - types-redis
+          - types-requests
+          - minio
+          - loguru
+          - playwright
+          - redis
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
