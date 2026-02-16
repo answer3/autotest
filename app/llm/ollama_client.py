@@ -35,7 +35,9 @@ class OllamaClient:
         self._model = model or settings.ollama_model
 
     def generate_plan_json(self, nl_text: str) -> dict[str, Any]:
-        payload = get_llm_request_payload(nl_text, self._model, settings.num_predict)
+        payload = get_llm_request_payload(
+            nl_text, self._model, settings.num_predict, settings.num_ctx
+        )
 
         r = requests.post(f"{self._base_url}/api/generate", json=payload, timeout=600)
         r.raise_for_status()
@@ -47,9 +49,13 @@ class OllamaClient:
             )
 
         raw = (data.get("response") or "").strip()
-        json_text = _extract_json_object(raw)
 
-        plan_json = json.loads(json_text)
+        try:
+            plan_json = json.loads(raw)
+        except json.JSONDecodeError:
+            json_text = _extract_json_object(raw)
+            plan_json = json.loads(json_text)
+
         valid_plan = validate_plan_payload(plan_json)
 
         return valid_plan

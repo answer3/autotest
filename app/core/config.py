@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     database_url: str = ""
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
-    num_predict: int = 400
+    num_predict: int = 800
+    num_ctx: int = 8192
 
     redis_url: str = "redis://localhost:6379/0"
     redis_llm_stream: str = "llm_jobs"

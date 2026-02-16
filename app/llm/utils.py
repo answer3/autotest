@@ -5,30 +5,41 @@ def get_promt(nl_text: str) -> str:
     return (
         "You are a Playwright test generator.\n"
         "Target language: Python Playwright (async).\n"
-        "Return ONLY valid JSON. No markdown. No explanations.\n\n"
-        "Output schema (JSON only):\n"
+        "Return ONLY a single JSON object. No markdown. No explanations. No extra text.\n\n"
+        "JSON schema (MUST match exactly; no extra keys):\n"
         "{"
         '"steps": ["..."],'
         '"assertions": ["..."]'
         "}\n\n"
-        "STRICT RULES:\n"
-        "- EVERY statement MUST start with 'await'.\n"
+        "STRICT OUTPUT RULES:\n"
+        "- Output MUST be valid JSON and MUST start with '{' and end with '}'.\n"
+        "- Use double quotes for JSON keys/strings. (JSON standard)\n"
+        "- The values inside steps/assertions are Playwright statements and MUST use single quotes ' for their string literals.\n"
+        "- Do NOT include comments, trailing commas, markdown fences, or any other keys.\n\n"
+        "PLAYWRIGHT STATEMENT RULES:\n"
+        "- EVERY statement MUST start with 'await '.\n"
         "- Use ONLY the commands listed below. No variations.\n"
-        "- Use single quotes ' for all string literals.\n"
-        "- Do NOT add comments or extra keys.\n"
-        "- Do NOT invent selectors or roles. Use only selectors mentioned or clearly implied in NL_TEST_CASE.\n"
-        "- Prefer explicit waits (waitForSelector, waitForURL) over implicit timing.\n"
-        "- When a value is secret/user-provided, use placeholders like <login>, <password> instead of real values.\n\n"
-        " - BASE_URL IMPORTANT: page.goto() MUST use ONLY relative paths like '/login'. Never output 'http://' or 'https://'.\n"
-        " - Regex URLs MUST be written as /pattern/ (single leading/trailing slash). Never use //pattern//.\n"
-        "ALLOWED STEPS:\n"
+        "- Do NOT output any Python code outside these statements.\n\n"
+        "SELECTOR POLICY (IMPORTANT):\n"
+        "- If a selector is explicitly provided in NL_TEST_CASE, use it as-is.\n"
+        '- If a selector is clearly implied as an id/name/data-testid (e.g. "id=login" or "data-testid=submit"), '
+        "use CSS selectors: '#id', '[name=\"...\"]', or '[data-testid=\"...\"]'.\n"
+        "- Otherwise, DO NOT invent selectors. Use a placeholder selector in the form '<selector:meaningful_name>'.\n"
+        "  Example: await page.click('<selector:submit_button>')\n"
+        "- For placeholder values (credentials/secrets), use '<login>', '<password>', '<email>', etc.\n\n"
+        "BASE_URL RULES:\n"
+        "- page.goto() and URL assertions MUST use ONLY relative paths like '/login' or '/dashboard'.\n"
+        "- Never output 'http://' or 'https://'.\n"
+        "- waitForURL / toHaveURL may use either a relative path string or a regex.\n"
+        "- Regex URLs MUST be written as /pattern/ (single leading/trailing slash). Never use //pattern//.\n\n"
+        "ALLOWED STEPS (ONLY these):\n"
         "- await page.goto('<url>')\n"
         "- await page.fill('<selector>', '<value>')\n"
         "- await page.click('<selector>')\n"
         "- await page.waitForSelector('<selector>')\n"
         "- await page.waitForURL('<url>')\n"
         "- await page.waitForURL(/<regex>/)\n\n"
-        "ALLOWED ASSERTIONS:\n"
+        "ALLOWED ASSERTIONS (ONLY these):\n"
         "- await expect(page).toHaveURL('<url>')\n"
         "- await expect(page).toHaveURL(/<regex>/)\n"
         "- await expect(page.locator('<selector>')).toBeVisible()\n"
@@ -40,19 +51,31 @@ def get_promt(nl_text: str) -> str:
         "- evaluate(), eval(), $$eval()\n"
         "- locator().click(), locator().fill()\n"
         "- Any JavaScript code or Python code outside the allowed commands\n\n"
-        "REQUIREMENTS:\n"
-        "- steps MUST contain at least one page.goto(...).\n"
-        "- assertions MUST validate the final state of the page.\n"
-        "- Keep steps minimal and deterministic.\n\n"
-        f"NL_TEST_CASE:\n{nl_text}\n"
+        "PLAN REQUIREMENTS:\n"
+        "- steps MUST contain at least one 'await page.goto(...)'.\n"
+        "- assertions MUST validate the final state of the page (final URL and/or visible content).\n"
+        "- Prefer deterministic waits: waitForSelector / waitForURL.\n"
+        "- Keep steps minimal (avoid redundant waits/clicks).\n\n"
+        "NL_TEST_CASE:\n"
+        f"{nl_text}\n"
     )
 
 
-def get_llm_request_payload(nl_text: str, model: str, num_predict: int) -> dict[str, Any]:
+def get_llm_request_payload(
+    nl_text: str, model: str, num_predict: int, num_ctx: int
+) -> dict[str, Any]:
     return {
         "model": model,
         "prompt": get_promt(nl_text),
         "stream": False,
         "format": "json",
-        "options": {"num_predict": num_predict},
+        "options": {
+            "num_ctx": num_ctx,
+            "num_predict": num_predict,
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "repeat_penalty": 1.1,
+            # "seed": 42,
+            "stop": ["\n\n\n", "```"],
+        },
     }
